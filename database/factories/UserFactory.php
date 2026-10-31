@@ -4,6 +4,7 @@ namespace Database\Factories;
 
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 
@@ -40,6 +41,23 @@ class UserFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'email_verified_at' => null,
+        ]);
+    }
+
+    /**
+     * Indicate that the user has two-factor authentication enabled.
+     */
+    public function withTwoFactor(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'two_factor_secret' => Crypt::encryptString('JBSWY3DPEHPK3PXP'),
+            'two_factor_recovery_codes' => Crypt::encryptString(json_encode([
+                'recovery-code-1',
+                'recovery-code-2',
+                'recovery-code-3',
+                'recovery-code-4',
+            ])),
+            'two_factor_confirmed_at' => now(),
         ]);
     }
 }

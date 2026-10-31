@@ -1,0 +1,56 @@
+<?php
+
+namespace App\Models;
+
+use Carbon\CarbonInterface;
+use Database\Factories\CommissionSchemeFactory;
+use Illuminate\Database\Eloquent\Attributes\Scope;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+
+class CommissionScheme extends Model
+{
+    /** @use HasFactory<CommissionSchemeFactory> */
+    use HasFactory;
+
+    protected $fillable = [
+        'tenant_id',
+        'commission_rate',
+        'valid_from',
+        'valid_to',
+    ];
+
+    protected function casts(): array
+    {
+        return [
+            'commission_rate' => 'decimal:4',
+            'valid_from' => 'datetime',
+            'valid_to' => 'datetime',
+        ];
+    }
+
+    /**
+     * Scope skema komisi yang berlaku pada waktu tertentu.
+     *
+     * Interval: [valid_from, valid_to)
+     */
+    #[Scope]
+    protected function effectiveAt(
+        Builder $query,
+        CarbonInterface $instant,
+    ): void {
+        $query->where('valid_from', '<=', $instant)
+            ->where(function (Builder $query) use ($instant): void {
+                $query->whereNull('valid_to')
+                    ->orWhere('valid_to', '>', $instant);
+            });
+    }
+
+    /** @return BelongsTo<Tenant, $this> */
+    public function tenant(): BelongsTo
+    {
+        return $this->belongsTo(Tenant::class);
+    }
+}
