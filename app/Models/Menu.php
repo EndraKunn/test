@@ -9,11 +9,13 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\Storage;
 
 class Menu extends Model
 {
     /** @use HasFactory<MenuFactory> */
-    use BelongsToTenant, HasFactory;
+    use BelongsToTenant, HasFactory, SoftDeletes;
 
     // tenant_id & category_id di-set eksplisit/aturan domain.
     protected $fillable = [
@@ -35,6 +37,17 @@ class Menu extends Model
     }
 
     /** @return BelongsTo<Tenant, $this> */
+
+    /**
+     * URL publik foto WebP, atau null bila belum ada foto.
+     */
+    public function photoUrl(): ?string
+    {
+        return $this->photo_path !== null
+            ? Storage::disk('public')->url($this->photo_path)
+            : null;
+    }
+
     public function tenant(): BelongsTo
     {
         return $this->belongsTo(Tenant::class);
@@ -63,7 +76,7 @@ class Menu extends Model
      * Predikat sellable: tersedia manual dan stok memadai.
      * Tenant aktif difilter di query publik.
      *
-     * @param Builder<Menu> $query
+     * @param  Builder<Menu>  $query
      */
     public function scopeSellable(Builder $query): void
     {

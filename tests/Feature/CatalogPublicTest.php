@@ -7,11 +7,11 @@ use App\Models\Menu;
 use App\Models\MenuCategory;
 use App\Models\Tenant;
 use App\Modules\Catalog\Services\PublicCatalogQuery;
+use App\Support\Tenancy\TenantContext;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
 use Tests\TestCase;
-use App\Support\Tenancy\TenantContext;
 
 class CatalogPublicTest extends TestCase
 {
@@ -32,53 +32,68 @@ class CatalogPublicTest extends TestCase
         return [$canteen, $tenant];
     }
 
-   private function menu(Tenant $tenant, array $attrs = []): Menu
-{
-    // Atur konteks sebelum membuat data tenant-owned.
-    app(TenantContext::class)->set($tenant);
+    private function menu(Tenant $tenant, array $attrs = []): Menu
+    {
+        // Atur konteks sebelum membuat data tenant-owned.
+        app(TenantContext::class)->set($tenant);
 
-    $category = MenuCategory::factory()->create([
-        'tenant_id' => $tenant->id,
-    ]);
+        $category = MenuCategory::factory()->create([
+            'tenant_id' => $tenant->id,
+        ]);
 
-    return Menu::factory()->create(array_merge([
-        'tenant_id' => $tenant->id,
-        'category_id' => $category->id,
-        'is_available' => true,
-        'stock_qty' => 10,
-    ], $attrs));
-}
+        return Menu::factory()->create(array_merge([
+            'tenant_id' => $tenant->id,
+            'category_id' => $category->id,
+            'is_available' => true,
+            'stock_qty' => 10,
+        ], $attrs));
+    }
 
-    public function test_catalog_shows_only_own_canteen_available_menus(): void
+    public function test_catalog_shows_own_canteen_menus_including_unavailable_items(): void
     {
         [$canteen, $tenant] = $this->canteenWithTenant();
 
-        $this->menu($tenant, ['name' => 'Nasi Goreng']);
+        $this->menu($tenant, [
+            'name' => 'Nasi Goreng',
+        ]);
+
         $this->menu($tenant, [
             'name' => 'Habis',
             'is_available' => false,
         ]);
+
         $this->menu($tenant, [
             'name' => 'Kosong',
             'stock_qty' => 0,
         ]);
 
-        // Canteen lain tidak boleh muncul.
+        // Kantin lain tidak boleh muncul.
         [, $otherTenant] = $this->canteenWithTenant();
 
         $this->menu($otherTenant, [
             'name' => 'Menu Kantin Lain',
         ]);
 
-        // Kembalikan konteks ke tenant milik katalog yang sedang diuji.
-app(TenantContext::class)->set($tenant);
+        // Kembalikan context ke tenant katalog.
+        app(TenantContext::class)->set($tenant);
 
         Livewire::test('catalog::menu-catalog', [
             'canteenSlug' => $canteen->slug,
         ])
-            ->assertSee('Nasi Goreng')
-            ->assertDontSee('Habis')
-            ->assertDontSee('Kosong')
+            ->assertSeeInOrder([
+                'data-sellable="0"',
+                'Habis',
+                'HABIS',
+            ], false)
+            ->assertSeeInOrder([
+                'data-sellable="0"',
+                'Kosong',
+                'HABIS',
+            ], false)
+            ->assertSeeInOrder([
+                'data-sellable="1"',
+                'Nasi Goreng',
+            ], false)
             ->assertDontSee('Menu Kantin Lain');
     }
 

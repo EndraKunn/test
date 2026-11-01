@@ -58,14 +58,14 @@ class ModularFoundationTest extends TestCase
         return $user;
     }
 
-  public function test_customer_route_is_public(): void
-{
-    $canteen = Canteen::query()->firstOrFail();
+    public function test_customer_route_is_public(): void
+    {
+        $canteen = Canteen::query()->firstOrFail();
 
-    $this->get(route('customer.home', [
-        'canteen' => $canteen->slug,
-    ]))->assertOk();
-}
+        $this->get(route('customer.home', [
+            'canteen' => $canteen->slug,
+        ]))->assertOk();
+    }
 
     public function test_guest_is_redirected_to_login_on_tenant_and_admin(): void
     {
