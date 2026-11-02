@@ -20,7 +20,7 @@ final class TenantOpeningHours
     }
 
     /**
-     * Memeriksa apakah tenant sedang buka.
+     * Memeriksa apakah tenant sedang buka oke.
      */
     public function isOpen(Tenant $tenant): bool
     {

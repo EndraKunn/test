@@ -49,7 +49,7 @@ new class extends Component
     }
 
     /**
-     * Validasi ulang keanggotaan tenant pada setiap request Livewire.
+     * Verifikasi keanggotaan tenant pada setiap request Livewire.
      */
     public function booted(): void
     {
@@ -99,6 +99,9 @@ new class extends Component
             ->get();
     }
 
+    /**
+     * Menambahkan kategori baru.
+     */
     public function addCategory(): void
     {
         $data = $this->validate([
@@ -112,10 +115,12 @@ new class extends Component
         $this->newCategory = '';
 
         unset($this->categories);
+
+        session()->flash('status', 'Kategori berhasil ditambahkan.');
     }
 
     /**
-     * Aturan validasi tambah dan ubah menu.
+     * Aturan validasi menu.
      */
     private function menuRules(): array
     {
@@ -138,18 +143,18 @@ new class extends Component
     protected function validationAttributes(): array
     {
         return [
-            'name' => 'nama',
+            'name' => 'nama menu',
             'description' => 'deskripsi',
             'categoryId' => 'kategori',
             'basePrice' => 'harga',
-            'prepMinutes' => 'waktu siap',
+            'prepMinutes' => 'waktu persiapan',
             'stockQty' => 'stok',
             'photo' => 'foto',
         ];
     }
 
     /**
-     * Membuat menu baru.
+     * Membuat menu.
      */
     public function createMenu(): void
     {
@@ -179,16 +184,16 @@ new class extends Component
             'photo_path' => $photoPath,
         ]);
 
-        // tenant_id otomatis berasal dari TenantContext.
+        // tenant_id berasal dari TenantContext.
         $menu->save();
 
         $this->resetForm();
 
-        session()->flash('status', 'Menu dibuat.');
+        session()->flash('status', 'Menu berhasil ditambahkan.');
     }
 
     /**
-     * Memuat menu ke form edit.
+     * Memuat data menu untuk diedit.
      */
     public function edit(int $menuId): void
     {
@@ -205,7 +210,7 @@ new class extends Component
     }
 
     /**
-     * Menyimpan perubahan menu.
+     * Memperbarui menu.
      */
     public function updateMenu(): void
     {
@@ -243,7 +248,6 @@ new class extends Component
             'photo_path' => $newPhotoPath,
         ])->save();
 
-        // Hapus foto lama hanya setelah foto baru berhasil disimpan.
         if ($this->photo && $oldPhotoPath !== null) {
             app(MenuPhotoStore::class)->delete($oldPhotoPath);
         }
@@ -265,11 +269,11 @@ new class extends Component
 
         $this->resetForm();
 
-        session()->flash('status', 'Menu diperbarui.');
+        session()->flash('status', 'Menu berhasil diperbarui.');
     }
 
     /**
-     * Soft delete menu.
+     * Menghapus menu menggunakan soft delete.
      */
     public function deleteMenu(int $menuId): void
     {
@@ -292,7 +296,7 @@ new class extends Component
 
         session()->flash(
             'status',
-            "Menu {$menuName} dihapus."
+            "Menu {$menuName} berhasil dihapus."
         );
     }
 
@@ -301,6 +305,9 @@ new class extends Component
         $this->resetForm();
     }
 
+    /**
+     * Mengembalikan form ke kondisi awal.
+     */
     private function resetForm(): void
     {
         $this->reset([
@@ -333,7 +340,7 @@ new class extends Component
     }
 
     /**
-     * Menambahkan stok menu.
+     * Menambahkan stok.
      */
     public function restock(int $menuId, int $delta): void
     {
@@ -349,73 +356,128 @@ new class extends Component
 
         unset($this->menus);
     }
+
 };
 ?>
 
-<div class="space-y-6">
+<div class="space-y-8">
 
+    {{-- Notifikasi --}}
     @if (session('status'))
-        <div class="rounded-lg bg-green-100 px-4 py-2 text-sm text-green-800 dark:bg-green-900/40 dark:text-green-300">
+        <div class="flex items-center gap-3 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm font-medium text-green-800">
+            <span class="flex size-7 items-center justify-center rounded-full bg-green-100">
+                ✓
+            </span>
+
             {{ session('status') }}
         </div>
     @endif
 
     {{-- Kategori --}}
-    <section>
-        <h2 class="font-semibold">Kategori</h2>
+    <section class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
 
-        <div class="mt-2 flex flex-wrap items-end gap-2">
-            <x-input
-                name="newCategory"
-                label="Kategori baru"
-                wire:model="newCategory"
-            />
+        <div class="mb-4">
+            <h2 class="text-lg font-bold text-slate-800">
+                Kategori Menu
+            </h2>
 
-            <x-button type="button" wire:click="addCategory">
-                Tambah Kategori
-            </x-button>
+            <p class="mt-1 text-sm text-slate-500">
+                Tambahkan kategori untuk mengelompokkan menu kantin.
+            </p>
         </div>
 
-        <p class="mt-2 text-sm text-zinc-500">
-            {{ $this->categories->pluck('name')->join(', ') ?: 'Belum ada kategori.' }}
-        </p>
+        <form wire:submit="addCategory" class="flex flex-col gap-3 sm:flex-row sm:items-end">
+
+            <div class="flex-1">
+                <x-input
+                    name="newCategory"
+                    label="Nama kategori"
+                    placeholder="Contoh: Makanan, Minuman, Camilan"
+                    wire:model="newCategory"
+                />
+
+                @error('newCategory')
+                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                @enderror
+            </div>
+
+            <x-button type="submit">
+                + Tambah Kategori
+            </x-button>
+
+        </form>
+
+        <div class="mt-4 flex flex-wrap gap-2">
+            @forelse ($this->categories as $category)
+                <span class="rounded-full bg-blue-50 px-3 py-1.5 text-sm font-medium text-blue-700">
+                    {{ $category->name }}
+                </span>
+            @empty
+                <p class="text-sm text-slate-500">
+                    Belum ada kategori.
+                </p>
+            @endforelse
+        </div>
+
     </section>
 
     {{-- Form Menu --}}
-    <section class="rounded-xl border border-zinc-200 p-4 dark:border-zinc-800">
+    <section class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
 
-        <h2 class="font-semibold">
-            {{ $editingId ? 'Ubah Menu' : 'Tambah Menu' }}
-        </h2>
+        <div class="mb-5 flex items-center justify-between gap-3">
+            <div>
+                <h2 class="text-lg font-bold text-slate-800">
+                    {{ $editingId ? 'Edit Menu' : 'Tambah Menu Baru' }}
+                </h2>
 
-        <div class="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <p class="mt-1 text-sm text-slate-500">
+                    Lengkapi informasi menu yang akan ditampilkan.
+                </p>
+            </div>
 
+            @if ($editingId)
+                <span class="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700">
+                    Mode Edit
+                </span>
+            @endif
+        </div>
+
+        <div class="grid grid-cols-1 gap-5 md:grid-cols-2">
+
+            {{-- Nama --}}
             <div>
                 <x-input
                     name="name"
                     label="Nama Menu"
+                    placeholder="Contoh: Nasi Goreng Spesial"
                     wire:model="name"
                 />
+
                 @error('name')
                     <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                 @enderror
             </div>
 
+            {{-- Kategori --}}
             <div>
-                <label class="text-sm font-medium text-zinc-700 dark:text-zinc-200">
-                    Kategori
+                <label
+                    for="categoryId"
+                    class="mb-1.5 block text-sm font-semibold text-slate-700"
+                >
+                    Kategori Menu
                 </label>
 
                 <select
+                    id="categoryId"
                     wire:model="categoryId"
-                    class="min-h-11 w-full rounded-lg border border-zinc-300 bg-white px-3 text-sm dark:border-zinc-600 dark:bg-zinc-800"
+                    class="min-h-11 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                 >
                     <option value="">Pilih kategori</option>
 
                     @foreach ($this->categories as $category)
                         <option
                             value="{{ $category->id }}"
-                            wire:key="cat-{{ $category->id }}"
+                            wire:key="category-{{ $category->id }}"
                         >
                             {{ $category->name }}
                         </option>
@@ -427,59 +489,76 @@ new class extends Component
                 @enderror
             </div>
 
-            <div class="sm:col-span-2">
+            {{-- Deskripsi --}}
+            <div class="md:col-span-2">
                 <x-input
                     name="description"
-                    label="Deskripsi (opsional)"
+                    label="Deskripsi Menu"
+                    placeholder="Tuliskan informasi singkat mengenai menu..."
                     wire:model="description"
                 />
+
                 @error('description')
                     <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                 @enderror
             </div>
 
+            {{-- Harga --}}
             <div>
                 <x-input
                     name="basePrice"
-                    label="Harga (Rp)"
+                    label="Harga (Rupiah)"
                     type="number"
+                    placeholder="Contoh: 15000"
                     wire:model="basePrice"
                 />
+
+                <p class="mt-1 text-xs text-slate-500">
+                    Harga minimal Rp1.
+                </p>
+
                 @error('basePrice')
                     <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                 @enderror
             </div>
 
+            {{-- Waktu Siap --}}
             <div>
                 <x-input
                     name="prepMinutes"
-                    label="Waktu siap (menit)"
+                    label="Waktu Persiapan (Menit)"
                     type="number"
+                    placeholder="Contoh: 10"
                     wire:model="prepMinutes"
                 />
+
                 @error('prepMinutes')
                     <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                 @enderror
             </div>
 
+            {{-- Stok --}}
             <div>
                 <x-input
                     name="stockQty"
-                    label="Stok"
+                    label="Jumlah Stok"
                     type="number"
+                    placeholder="Contoh: 50"
                     wire:model="stockQty"
                 />
+
                 @error('stockQty')
                     <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                 @enderror
             </div>
 
+            {{-- Foto --}}
             <div>
                 <label
                     for="photo"
-                    class="text-sm font-medium text-zinc-700 dark:text-zinc-200"
+                    class="mb-1.5 block text-sm font-semibold text-slate-700"
                 >
-                    Foto (JPG/PNG/WebP, maksimal 2 MB)
+                    Foto Menu
                 </label>
 
                 <input
@@ -487,25 +566,38 @@ new class extends Component
                     type="file"
                     wire:model="photo"
                     accept="image/jpeg,image/png,image/webp"
-                    class="mt-2 block w-full text-sm"
+                    class="block min-h-11 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 file:me-3 file:rounded-md file:border-0 file:bg-blue-50 file:px-3 file:py-1 file:text-sm file:font-semibold file:text-blue-700 hover:file:bg-blue-100"
                 />
+
+                <p class="mt-1 text-xs text-slate-500">
+                    JPG, PNG, atau WebP. Maksimal 2 MB.
+                    Foto akan dikompres menjadi WebP.
+                </p>
 
                 @error('photo')
                     <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                 @enderror
 
                 @if ($photo)
-                    <img
-                        src="{{ $photo->temporaryUrl() }}"
-                        alt="Pratinjau foto menu"
-                        class="mt-2 size-24 rounded-lg object-cover"
-                    />
+                    <div class="mt-3">
+                        <p class="mb-2 text-xs font-semibold text-slate-600">
+                            Pratinjau foto baru
+                        </p>
+
+                        <img
+                            src="{{ $photo->temporaryUrl() }}"
+                            alt="Pratinjau foto menu"
+                            class="size-28 rounded-xl border border-slate-200 object-cover"
+                        />
+                    </div>
                 @endif
             </div>
 
         </div>
 
-        <div class="mt-4 flex flex-wrap gap-2">
+        {{-- Tombol Form --}}
+        <div class="mt-6 flex flex-wrap gap-3 border-t border-slate-100 pt-5">
+
             @if ($editingId)
                 <x-button type="button" wire:click="updateMenu">
                     Simpan Perubahan
@@ -520,34 +612,45 @@ new class extends Component
                 </x-button>
             @else
                 <x-button type="button" wire:click="createMenu">
-                    Simpan Menu
+                    + Simpan Menu
                 </x-button>
             @endif
+
         </div>
 
     </section>
 
     {{-- Daftar Menu --}}
-    <section>
+    <section class="space-y-4">
 
-        <div class="flex flex-wrap items-end justify-between gap-2">
-            <h2 class="font-semibold">Menu &amp; Stok</h2>
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
 
-            <div class="flex flex-wrap gap-2">
+            <div>
+                <h2 class="text-lg font-bold text-slate-800">
+                    Daftar Menu &amp; Stok
+                </h2>
+
+                <p class="mt-1 text-sm text-slate-500">
+                    Pantau ketersediaan, harga, dan stok menu.
+                </p>
+            </div>
+
+            <div class="flex flex-col gap-2 sm:flex-row">
 
                 <input
                     type="search"
                     wire:model.live.debounce.300ms="search"
-                    placeholder="Cari menu..."
-                    class="min-h-11 rounded-lg border border-zinc-300 bg-white px-3 text-sm dark:border-zinc-600 dark:bg-zinc-800"
+                    placeholder="Cari nama menu..."
+                    aria-label="Cari menu"
+                    class="min-h-11 rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                 />
 
                 <select
                     wire:model.live="filterCategory"
                     aria-label="Filter kategori"
-                    class="min-h-11 rounded-lg border border-zinc-300 bg-white px-3 text-sm dark:border-zinc-600 dark:bg-zinc-800"
+                    class="min-h-11 rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                 >
-                    <option value="">Kategori: Semua</option>
+                    <option value="">Semua Kategori</option>
 
                     @foreach ($this->categories as $category)
                         <option
@@ -560,101 +663,125 @@ new class extends Component
                 </select>
 
             </div>
+
         </div>
 
-        <div class="mt-3 overflow-x-auto rounded-xl border border-zinc-200 dark:border-zinc-800">
+        {{-- Tabel --}}
+        <div class="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
 
-            <table class="w-full min-w-[48rem] text-left text-sm">
+            <table class="w-full min-w-[850px] text-left text-sm">
 
-                <thead class="bg-zinc-100 text-xs uppercase tracking-wide text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
+                <thead class="bg-slate-50 text-xs font-bold uppercase tracking-wide text-slate-600">
                     <tr>
-                        <th class="px-4 py-2">Foto</th>
-                        <th class="px-4 py-2">Nama Menu</th>
-                        <th class="px-4 py-2">Kategori</th>
-                        <th class="px-4 py-2">Harga</th>
-                        <th class="px-4 py-2">Siap</th>
-                        <th class="px-4 py-2">Stok</th>
-                        <th class="px-4 py-2">Status</th>
-                        <th class="px-4 py-2 text-right">Aksi</th>
+                        <th class="px-4 py-4">Foto</th>
+                        <th class="px-4 py-4">Nama Menu</th>
+                        <th class="px-4 py-4">Kategori</th>
+                        <th class="px-4 py-4">Harga</th>
+                        <th class="px-4 py-4">Waktu Siap</th>
+                        <th class="px-4 py-4">Stok</th>
+                        <th class="px-4 py-4">Status</th>
+                        <th class="px-4 py-4 text-right">Aksi</th>
                     </tr>
                 </thead>
 
-                <tbody>
+                <tbody class="divide-y divide-slate-100">
 
                     @forelse ($this->menus as $menu)
 
+                        @php
+                            $sellable = $menu->is_available && $menu->stock_qty > 0;
+                        @endphp
+
                         <tr
                             wire:key="menu-{{ $menu->id }}"
-                            class="border-t border-zinc-200 dark:border-zinc-800"
+                            class="transition hover:bg-slate-50"
                         >
 
-                            <td class="px-4 py-2">
+                            {{-- Foto --}}
+                            <td class="px-4 py-3">
                                 @if ($menu->photoUrl())
                                     <img
                                         src="{{ $menu->photoUrl() }}"
                                         alt="Foto {{ $menu->name }}"
-                                        class="size-11 rounded object-cover"
+                                        class="size-12 rounded-lg border border-slate-200 object-cover"
                                     />
                                 @else
-                                    <span class="flex size-11 items-center justify-center rounded bg-zinc-200 text-xs font-bold text-zinc-600 dark:bg-zinc-700 dark:text-zinc-300">
+                                    <span class="flex size-12 items-center justify-center rounded-lg bg-blue-50 text-sm font-bold text-blue-700">
                                         {{ Str::upper(Str::substr($menu->name, 0, 2)) }}
                                     </span>
                                 @endif
                             </td>
 
-                            <td class="px-4 py-2 font-medium">
-                                {{ $menu->name }}
-
-                                @unless ($menu->is_available && $menu->stock_qty > 0)
-                                    <span class="ms-1 rounded bg-red-100 px-1.5 text-[10px] font-bold text-red-700">
-                                        HABIS
-                                    </span>
-                                @endunless
+                            {{-- Nama Menu --}}
+                            <td class="px-4 py-3">
+                                <p class="font-semibold text-slate-800">
+                                    {{ $menu->name }}
+                                </p>
 
                                 @if ($menu->description)
-                                    <p class="mt-1 text-xs font-normal text-zinc-500">
+                                    <p class="mt-1 max-w-48 text-xs text-slate-500">
                                         {{ $menu->description }}
                                     </p>
                                 @endif
+
+                                @unless ($sellable)
+                                    <span class="mt-1 inline-flex rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-bold text-red-700">
+                                        HABIS
+                                    </span>
+                                @endunless
                             </td>
 
-                            <td class="px-4 py-2">
+                            {{-- Kategori --}}
+                            <td class="px-4 py-3 text-slate-600">
                                 {{ $menu->category?->name }}
                             </td>
 
-                            <td class="px-4 py-2">
+                            {{-- Harga --}}
+                            <td class="px-4 py-3 font-semibold text-slate-800">
                                 Rp {{ number_format($menu->base_price, 0, ',', '.') }}
                             </td>
 
-                            <td class="px-4 py-2">
-                                {{ $menu->prep_minutes }} mnt
+                            {{-- Waktu Persiapan --}}
+                            <td class="px-4 py-3 text-slate-600">
+                                {{ $menu->prep_minutes }} menit
                             </td>
 
-                            <td class="px-4 py-2 {{ $menu->stock_qty <= 5 ? 'font-semibold text-amber-600' : '' }}">
-                                {{ $menu->stock_qty }}
+                            {{-- Stok --}}
+                            <td class="px-4 py-3">
+                                <span class="{{ $menu->stock_qty <= 5 ? 'font-bold text-amber-600' : 'font-medium text-slate-700' }}">
+                                    {{ $menu->stock_qty }}
+                                </span>
                             </td>
 
-                            <td class="px-4 py-2">
+                            {{-- Status --}}
+                            <td class="px-4 py-3">
+
                                 <button
                                     type="button"
                                     role="switch"
                                     aria-checked="{{ $menu->is_available ? 'true' : 'false' }}"
                                     wire:click="toggle({{ $menu->id }})"
-                                    class="inline-flex min-h-11 items-center gap-2"
-                                    aria-label="Ketersediaan {{ $menu->name }}"
+                                    class="inline-flex min-h-10 items-center gap-2 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                                    aria-label="Ubah ketersediaan {{ $menu->name }}"
                                 >
-                                    <span class="text-xs">
-                                        {{ $menu->is_available ? 'Tersedia' : 'Habis' }}
+                                    <span class="relative h-6 w-11 rounded-full transition {{ $menu->is_available ? 'bg-green-500' : 'bg-slate-300' }}">
+                                        <span class="absolute top-0.5 size-5 rounded-full bg-white shadow transition {{ $menu->is_available ? 'left-5' : 'left-0.5' }}"></span>
                                     </span>
                                 </button>
+
+                                <p class="mt-1 text-xs font-medium {{ $sellable ? 'text-green-700' : 'text-red-600' }}">
+                                    {{ $sellable ? 'Tersedia' : 'Habis' }}
+                                </p>
+
                             </td>
 
-                            <td class="px-4 py-2 text-right whitespace-nowrap">
+                            {{-- Aksi --}}
+                            <td class="px-4 py-3 text-right whitespace-nowrap">
 
                                 <button
                                     type="button"
                                     wire:click="edit({{ $menu->id }})"
-                                    class="me-2 min-h-11 text-sm underline"
+                                    class="me-2 rounded-md px-2 py-2 text-xs font-semibold text-blue-700 hover:bg-blue-50"
                                 >
                                     Edit
                                 </button>
@@ -662,16 +789,16 @@ new class extends Component
                                 <button
                                     type="button"
                                     wire:click="restock({{ $menu->id }}, 10)"
-                                    class="me-2 min-h-11 text-sm underline"
+                                    class="me-2 rounded-md px-2 py-2 text-xs font-semibold text-green-700 hover:bg-green-50"
                                 >
-                                    +10 stok
+                                    +10 Stok
                                 </button>
 
                                 <button
                                     type="button"
                                     wire:click="deleteMenu({{ $menu->id }})"
                                     wire:confirm="Hapus menu {{ $menu->name }}? Riwayat pesanan tetap tersimpan."
-                                    class="min-h-11 text-sm text-red-700 underline dark:text-red-400"
+                                    class="rounded-md px-2 py-2 text-xs font-semibold text-red-600 hover:bg-red-50"
                                 >
                                     Hapus
                                 </button>
@@ -683,8 +810,11 @@ new class extends Component
                     @empty
 
                         <tr>
-                            <td class="px-4 py-3" colspan="8">
-                                <x-empty-state title="Belum ada menu" />
+                            <td colspan="8" class="px-4 py-10 text-center">
+                                <x-empty-state
+                                    title="Menu tidak ditemukan"
+                                    description="Tambahkan menu baru atau ubah kata kunci pencarian."
+                                />
                             </td>
                         </tr>
 
@@ -696,8 +826,9 @@ new class extends Component
 
         </div>
 
-        <p class="mt-2 text-xs text-zinc-500">
-            Hapus menggunakan soft delete. Riwayat transaksi tetap dapat merujuk menu yang pernah dipesan.
+        <p class="text-xs text-slate-500">
+            Informasi stok dan ketersediaan diperbarui secara langsung.
+            Penghapusan menggunakan soft delete sehingga data menu tetap tersimpan dalam riwayat transaksi.
         </p>
 
     </section>
