@@ -1,4 +1,3 @@
-
 <?php
 
 use App\Models\Menu;
@@ -11,6 +10,7 @@ use App\Modules\Catalog\Services\MenuStockService;
 use App\Support\Tenancy\TenantContext;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Livewire\Attributes\Computed;
 use Livewire\Component;
 use Livewire\WithFileUploads;
@@ -104,9 +104,19 @@ new class extends Component
      */
     public function addCategory(): void
     {
-        $data = $this->validate([
-            'newCategory' => ['required', 'string', 'max:120'],
-        ]);
+        $data = $this->validate(
+            [
+                'newCategory' => [
+                    'required',
+                    'string',
+                    'max:120',
+                    Rule::unique('menu_categories', 'name')
+                        ->where('tenant_id', $this->tenantId),
+                ],
+            ],
+            [],
+            ['newCategory' => 'nama kategori']
+        );
 
         MenuCategory::create([
             'name' => $data['newCategory'],
@@ -714,21 +724,23 @@ new class extends Component
 
                             {{-- Nama Menu --}}
                             <td class="px-4 py-3">
-                                <p class="font-semibold text-slate-800">
-                                    {{ $menu->name }}
-                                </p>
+                                <div class="flex flex-wrap items-center gap-2">
+                                    <p class="font-semibold text-slate-800">
+                                        {{ $menu->name }}
+                                    </p>
+
+                                    @unless ($sellable)
+                                        <span class="inline-flex rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-bold text-red-700">
+                                            HABIS
+                                        </span>
+                                    @endunless
+                                </div>
 
                                 @if ($menu->description)
-                                    <p class="mt-1 max-w-48 text-xs text-slate-500">
+                                    <p class="mt-1 max-w-64 text-xs text-slate-500">
                                         {{ $menu->description }}
                                     </p>
                                 @endif
-
-                                @unless ($sellable)
-                                    <span class="mt-1 inline-flex rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-bold text-red-700">
-                                        HABIS
-                                    </span>
-                                @endunless
                             </td>
 
                             {{-- Kategori --}}
@@ -761,17 +773,17 @@ new class extends Component
                                     role="switch"
                                     aria-checked="{{ $menu->is_available ? 'true' : 'false' }}"
                                     wire:click="toggle({{ $menu->id }})"
-                                    class="inline-flex min-h-10 items-center gap-2 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                                    class="inline-flex min-h-10 cursor-pointer items-center gap-2.5 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
                                     aria-label="Ubah ketersediaan {{ $menu->name }}"
                                 >
-                                    <span class="relative h-6 w-11 rounded-full transition {{ $menu->is_available ? 'bg-green-500' : 'bg-slate-300' }}">
+                                    <span class="relative inline-block h-6 w-11 shrink-0 rounded-full transition {{ $menu->is_available ? 'bg-green-500' : 'bg-slate-300' }}">
                                         <span class="absolute top-0.5 size-5 rounded-full bg-white shadow transition {{ $menu->is_available ? 'left-5' : 'left-0.5' }}"></span>
                                     </span>
-                                </button>
 
-                                <p class="mt-1 text-xs font-medium {{ $sellable ? 'text-green-700' : 'text-red-600' }}">
-                                    {{ $sellable ? 'Tersedia' : 'Habis' }}
-                                </p>
+                                    <span class="text-xs font-semibold {{ $sellable ? 'text-green-700' : 'text-red-600' }}">
+                                        {{ $sellable ? 'Tersedia' : 'Habis' }}
+                                    </span>
+                                </button>
 
                             </td>
 

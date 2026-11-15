@@ -32,6 +32,14 @@ new class extends Component
         $this->category = $name;
     }
 
+    /**
+     * Meneruskan permintaan tambah ke komponen keranjang (yang memegang sesi tepercaya).
+     */
+    public function add(int $menuId): void
+    {
+        $this->dispatch('cart-add', menuId: $menuId);
+    }
+
     #[Computed]
     public function canteen(): ?Canteen
     {
@@ -105,13 +113,13 @@ new class extends Component
                 type="search"
                 wire:model.live.debounce.300ms="search"
                 placeholder="Cari menu atau tenant..."
-                class="min-h-11 rounded-lg border border-zinc-300 bg-white px-3 text-sm dark:border-zinc-600 dark:bg-zinc-800"
+                class="min-h-11 rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 placeholder:text-slate-400 shadow-sm focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-500/20"
             />
 
             <select
                 wire:model.live="tenantId"
                 aria-label="Saring tenant"
-                class="min-h-11 rounded-lg border border-zinc-300 bg-white px-3 text-sm dark:border-zinc-600 dark:bg-zinc-800"
+                class="min-h-11 rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 shadow-sm focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-500/20"
             >
                 <option value="">Semua tenant</option>
 
@@ -136,7 +144,7 @@ new class extends Component
                     @class([
                         'min-h-9 shrink-0 rounded-full border px-3 text-sm',
                         'border-red-600 bg-red-600 text-white' => ! $category,
-                        'border-zinc-300' => $category,
+                        'border-slate-300 bg-white text-slate-700' => $category,
                     ])
                 >
                     Semua
@@ -150,7 +158,7 @@ new class extends Component
                         @class([
                             'min-h-9 shrink-0 rounded-full border px-3 text-sm',
                             'border-red-600 bg-red-600 text-white' => $category === $name,
-                            'border-zinc-300' => $category !== $name,
+                            'border-slate-300 bg-white text-slate-700' => $category !== $name,
                         ])
                     >
                         {{ $name }}
@@ -160,7 +168,7 @@ new class extends Component
 
         </div>
 
-        <div wire:loading class="text-sm text-zinc-500">
+        <div wire:loading class="text-sm text-slate-500">
             Memuat katalog...
         </div>
 
@@ -175,9 +183,9 @@ new class extends Component
                 data-test="tenant-group"
             >
 
-                <div class="flex items-baseline justify-between border-b-2 border-zinc-900 pb-2 dark:border-zinc-100">
+                <div class="flex items-baseline justify-between border-b-2 border-slate-900 pb-2">
 
-                    <h2 class="text-sm font-extrabold uppercase tracking-wide">
+                    <h2 class="text-sm font-extrabold uppercase tracking-wide text-slate-900">
                         {{ $tenant->display_name }}
                     </h2>
 
@@ -189,7 +197,7 @@ new class extends Component
 
                     @else
 
-                        <span class="text-xs font-semibold text-zinc-500">
+                        <span class="text-xs font-semibold text-slate-500">
                             Tutup · Buka pukul
                             {{ $hours->opensAtToday($tenant) ?? '—' }}
                         </span>
@@ -198,7 +206,7 @@ new class extends Component
 
                 </div>
 
-                <ul class="divide-y divide-zinc-200 dark:divide-zinc-800">
+                <ul class="divide-y divide-slate-200">
 
                     @foreach ($menus as $menu)
 
@@ -224,7 +232,7 @@ new class extends Component
 
                             @else
 
-                                <span class="flex size-14 shrink-0 items-center justify-center rounded bg-zinc-200 text-sm font-bold text-zinc-600 dark:bg-zinc-700 dark:text-zinc-300">
+                                <span class="flex size-14 shrink-0 items-center justify-center rounded-lg bg-slate-200 text-sm font-bold text-slate-700">
                                     {{ Str::upper(Str::substr($menu->name, 0, 2)) }}
                                 </span>
 
@@ -233,29 +241,41 @@ new class extends Component
                             {{-- Informasi menu --}}
                             <div class="min-w-0 flex-1">
 
-                                <p class="truncate font-semibold">
+                                <p class="truncate font-semibold text-slate-900">
                                     {{ $menu->name }}
                                 </p>
 
-                                <p class="truncate text-xs text-zinc-500">
+                                <p class="truncate text-xs text-slate-500">
                                     {{ $menu->description ? $menu->description.' · ' : '' }}
                                     ± {{ $menu->prep_minutes }} mnt
                                 </p>
 
-                                <p class="text-sm font-semibold">
+                                <p class="text-sm font-semibold text-slate-900">
                                     Rp {{ number_format($menu->base_price, 0, ',', '.') }}
                                 </p>
 
                             </div>
 
-                            {{-- Status stok --}}
+                            {{-- Status stok / Tambah --}}
                             @unless ($menu->is_available && $menu->stock_qty > 0)
 
-                                <span class="shrink-0 rounded border border-zinc-300 px-2 py-1 text-[10px] font-bold text-zinc-600">
+                                <span class="shrink-0 rounded border border-slate-300 px-2 py-1 text-[10px] font-bold text-slate-600">
                                     HABIS
                                 </span>
 
                             @endunless
+
+                            @if ($sellable)
+
+                                <button
+                                    type="button"
+                                    wire:click="add({{ $menu->id }})"
+                                    class="min-h-9 shrink-0 cursor-pointer rounded-lg border border-slate-300 bg-white px-3 text-sm font-medium text-slate-800 shadow-sm hover:bg-slate-50"
+                                >
+                                    + Tambah
+                                </button>
+
+                            @endif
 
                         </li>
 

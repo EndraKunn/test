@@ -1,22 +1,15 @@
 @props([
     'title' => 'Tidak ada data',
+    'description' => null,
     'message' => 'Belum ada data yang tersedia.',
 ])
 
-<div
-    style="
-        padding: 40px 20px;
-        text-align: center;
-        background: white;
-        border: 1px solid #e2e8f0;
-        border-radius: 8px;
-    "
->
-    <h3 style="margin-top: 0;">
+<div class="rounded-xl border border-slate-200 bg-white px-5 py-10 text-center">
+    <h3 class="text-base font-semibold text-slate-800">
         {{ $title }}
     </h3>
 
-    <p style="color: #64748b;">
-        {{ $message }}
+    <p class="mt-1 text-sm text-slate-500">
+        {{ $description ?? $message }}
     </p>
 </div>

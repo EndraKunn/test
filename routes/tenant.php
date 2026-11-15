@@ -1,4 +1,3 @@
-
 <?php
 
 use App\Models\Menu;
@@ -26,4 +25,10 @@ Route::prefix('tenant/{tenant:slug}')
                 'tenant' => $tenant,
             ]);
         })->name('menu-manager');
+
+        Route::get('/modifiers', function (Tenant $tenant) {
+            return view('catalog::tenant.modifier-manager', [
+                'tenant' => $tenant,
+            ]);
+        })->name('modifier-manager');
     });
